@@ -1,0 +1,286 @@
+---
+title: "Weight Lifting Exercises Prediction using R Programming Language"
+author: "Jaya Rama Vardhan Reddy"
+date: "17/10/2020"
+output: html_document
+---
+loading packages
+```{r,warning=FALSE,message=FALSE,include=FALSE,echo=FALSE}
+library(dplyr)
+library(ggplot2)
+library(DT)
+library(caret)
+library(knitr)
+library(corrplot)
+library(plotly)
+library(correlationfunnel)
+library(GGally)
+library(e1071)
+```
+
+Loading both training and testing data
+
+```{r}
+dataFrameTrainLoad <- read.csv("pml-training.csv", stringsAsFactors = F,na.strings = c("","NA","#DIV/0!"))
+dataFrameTestLoad <- read.csv("pml-testing.csv", stringsAsFactors = F,na.strings = c("","NA","#DIV/0!"))
+dim(dataFrameTrainLoad); dim(dataFrameTestLoad)
+```
+  
+
+```{r}
+informationOfTraining <- createDataPartition(dataFrameTrainLoad$classe, p = 0.8, list = F)
+valueOfDifferent <- dataFrameTrainLoad[-informationOfTraining,]
+dataFrameTrainLoad <- dataFrameTrainLoad[informationOfTraining,]
+dim(dataFrameTrainLoad); dim(valueOfDifferent)
+```
+  
+```{r}
+table(dataFrameTrainLoad$classe)/nrow(dataFrameTrainLoad)
+```
+
+
+```{r}
+missingBeltVariable <- sapply(select(dataFrameTrainLoad,names(dataFrameTrainLoad)[grepl("_belt",names(dataFrameTrainLoad))]),
+                    function(x) sum(is.na(x)))
+missingBeltVariable
+```
+
+
+```{r}
+missingArmVariable <- sapply(select(dataFrameTrainLoad,names(dataFrameTrainLoad)[grepl("_arm",names(dataFrameTrainLoad))]),
+                   function(x) sum(is.na(x)))
+missingArmVariable
+```  
+
+
+```{r}
+missingforearmVariable <- sapply(select(dataFrameTrainLoad,
+                              names(dataFrameTrainLoad)[grepl("_forearm",names(dataFrameTrainLoad))]),
+                       function(x) sum(is.na(x)))
+missingforearmVariable
+```  
+
+
+```{r}
+missingdumbbellVariable <- sapply(select(dataFrameTrainLoad,
+                               names(dataFrameTrainLoad)[grepl("_dumbbell",names(dataFrameTrainLoad))]),
+                        function(x) sum(is.na(x)))
+missingdumbbellVariable
+``` 
+
+
+
+```{r}
+dropColumn2Variable <- c(names(missingBeltVariable[missingBeltVariable != 0]), 
+                  names(missingArmVariable[missingArmVariable != 0]),
+                  names(missingforearmVariable[missingforearmVariable != 0]),
+                  names(missingdumbbellVariable[missingdumbbellVariable != 0]))
+length(dropColumn2Variable)
+```
+
+ 
+
+```{r}
+differenceAnalizeVariable <- tbl_df(dataFrameTrainLoad %>% 
+                      select(-dropColumn2Variable,
+                             -c(X,user_name, raw_timestamp_part_1, 
+                                raw_timestamp_part_2, cvtd_timestamp, 
+                                new_window,num_window)))
+differenceAnalizeVariable$classe <- as.factor(differenceAnalizeVariable$classe)
+differenceAnalizeVariable[,1:52] <- lapply(differenceAnalizeVariable[,1:52],as.numeric)
+dim(differenceAnalizeVariable)
+```
+
+
+```{r,fig.height=10,fig.width=10}
+correlation_columnVariable <- cor(select(differenceAnalizeVariable, -classe))
+diag(correlation_columnVariable) <- 0
+correlation_columnVariable <- which(abs(correlation_columnVariable)>0.8,arr.ind = T)
+correlation_columnVariable <- unique(row.names(correlation_columnVariable))
+corrplot(cor(select(differenceAnalizeVariable,correlation_columnVariable)),
+         type="upper", order="hclust",method = "number")
+```
+
+
+```{r}
+correlation_functionDifferenceVariable <- differenceAnalizeVariable %>% binarize(n_bins = 4, thresh_infreq = 0.01)
+```
+
+
+```{r,fig.align="center",fig.width=8,fig.height=10}
+correlation_Variablea <- correlation_functionDifferenceVariable %>% correlate(target = classe__A) 
+correlation_Variablea %>% plot_correlation_funnel(interactive = T,limits = c(-0.5,0.5))
+```
+
+
+
+```{r, echo=FALSE, eval=FALSE}
+temporary_Variablea <- head(correlation_Variablea %>% mutate(corr = abs(correlation)) %>% 
+  arrange(desc(corr)) %>% select(feature) %>% unique(),20)
+temporary_Variablea$feature[which(temporary_Variablea$feature %in% correlation_columnVariable)]
+```
+
+
+
+```{r,fig.align="center",fig.width=8,fig.height=10}
+correlation_Variableb <- correlation_functionDifferenceVariable %>% correlate(target = classe__B)
+correlation_Variableb %>% plot_correlation_funnel(interactive = T,limits = c(-0.5,0.5))
+```
+
+
+```{r, echo=FALSE, eval=FALSE}
+temporary_Variableb <- head(correlation_Variableb %>% mutate(corr = abs(correlation)) %>% 
+  arrange(desc(corr)) %>% select(feature) %>% unique(),20)
+temporary_Variableb$feature[which(temporary_Variableb$feature %in% correlation_columnVariable)]
+```
+Correlation variable number c
+
+```{r,fig.align="center",fig.width=8,fig.height=10}
+correlation_Variablec <- correlation_functionDifferenceVariable %>% correlate(target = classe__C)
+correlation_Variablec %>% plot_correlation_funnel(interactive = T,limits = c(-0.5,0.5))
+```
+Temporary variables number c
+
+```{r, echo=FALSE, eval=FALSE}
+temporary_Variablec <- head(correlation_Variablec %>% mutate(corr = abs(correlation)) %>% 
+  arrange(desc(corr)) %>% select(feature) %>% unique(),20)
+temporary_Variablec$feature[which(temporary_Variablec$feature %in% correlation_columnVariable)]
+```
+Temporary variable number d
+
+```{r,fig.align="center",fig.width=8,fig.height=10}
+correaltion_Variabled <- correlation_functionDifferenceVariable %>% correlate(target = classe__D)
+correaltion_Variabled %>% plot_correlation_funnel(interactive = T,limits = c(-0.5,0.5))
+```
+
+Temporary Variables
+```{r, echo=FALSE, eval=FALSE}
+temporary_Variabled <- head(correaltion_Variabled %>% mutate(corr = abs(correlation)) %>% 
+  arrange(desc(corr)) %>% select(feature) %>% unique(),20)
+temporary_Variabled$feature[which(temporary_Variabled$feature %in% correlation_columnVariable)]
+```
+
+
+```{r,fig.align="center",fig.width=8,fig.height=10}
+correlation_Variablee <- correlation_functionDifferenceVariable %>% correlate(target = classe__E)
+correlation_Variablee %>% plot_correlation_funnel(interactive = T,limits = c(-0.5,0.5))
+```
+
+
+```{r, echo=FALSE, eval=FALSE}
+temporary_Variablee <- head(correlation_Variablee %>% mutate(corr = abs(correlation)) %>% 
+  arrange(desc(corr)) %>% select(feature) %>% unique(),20)
+temporary_Variablee$feature[which(temporary_Variablee$feature %in% correlation_columnVariable)]
+```
+
+
+```{r}
+columnVariablea <- c("magnet_arm_x", "pitch_forearm" , "magnet_dumbbell_y", 
+           "roll_forearm", "gyros_dumbbell_y") 
+columnVariableb <- c("magnet_dumbbell_y", "magnet_dumbbell_x" , "roll_dumbbell" , 
+           "magnet_belt_y" , "accel_dumbbell_x" )
+columnVariablec <- c("magnet_dumbbell_y", "roll_dumbbell" , "accel_dumbbell_y" , 
+           "magnet_dumbbell_x", "magnet_dumbbell_z")
+columnVariabled <- c("pitch_forearm" , "magnet_arm_y" , "magnet_forearm_x",
+           "accel_dumbbell_y", "accel_forearm_x")
+columnVariablee <- c("magnet_belt_y" , "magnet_belt_z" , "roll_belt", 
+           "gyros_belt_z" , "magnet_dumbbell_y")
+finalColumnVariablee <- character()
+for(c in c(columnVariablea,columnVariableb,columnVariablec,columnVariabled,columnVariablee)){
+  finalColumnVariablee <- union(finalColumnVariablee, c)
+}
+dataFrameAnalize2Variable <- differenceAnalizeVariable %>% select(finalColumnVariablee, classe)
+data.frame("arm" = sum(grepl("_arm",finalColumnVariablee)), 
+           "forearm" = sum(grepl("_forearm",finalColumnVariablee)),
+           "belt" = sum(grepl("_belt",finalColumnVariablee)),
+           "dumbbell" = sum(grepl("_dumbbell",finalColumnVariablee)))
+```
+Ploting density and point variables
+
+
+```{r, fig.align="center",fig.height=15,fig.width=15}
+my_densityVariable <- function(data, mapping, ...) {
+  ggplot(data = data, mapping=mapping) +
+    geom_density(..., alpha = 0.3)+scale_fill_brewer(palette="Set2") 
+}
+my_pointVariable <- function(data, mapping, ...) {
+  ggplot(data = data, mapping=mapping) +
+    geom_point(..., alpha = 0.1)+ scale_fill_brewer(palette="Set2") 
+}
+ggpairs(dataFrameAnalize2Variable, columns = 1:5,aes(color = classe),
+        lower = list(continuous = my_pointVariable),diag = list(continuous = my_densityVariable))
+```
+Ploting some data
+
+```{r,fig.align="center",fig.height=15,fig.width=15}
+ggpairs(dataFrameAnalize2Variable, columns = 6:10,aes(color = classe),
+        lower = list(continuous = my_pointVariable),diag = list(continuous = my_densityVariable))
+```
+
+```{r,fig.align="center",fig.height=15,fig.width=15}
+ggpairs(dataFrameAnalize2Variable, columns = 11:17,aes(color = classe),
+        lower = list(continuous = my_pointVariable),diag = list(continuous = my_densityVariable))
+```
+
+
+
+```{r}
+dfTrainF <- dataFrameTrainLoad %>% select(finalColumnVariablee,classe)
+dfValF <- valueOfDifferent %>% select(finalColumnVariablee,classe)
+dfTrainF[,1:17] <- sapply(dfTrainF[,1:17],as.numeric)
+dfValF[,1:17] <- sapply(dfValF[,1:17],as.numeric)
+levels <- c("A", "B", "C", "D", "E")
+preprop_obj <- preProcess(dfTrainF[,-18],method = c("center","scale","BoxCox"))
+xTrain <- predict(preprop_obj,select(dfTrainF,-classe))
+yTrain <- factor(dfTrainF$classe,levels=levels)
+xVal <- predict(preprop_obj,select(dfValF,-classe))
+yVal <- factor(dfValF$classe,levels=levels)
+trControl <- trainControl(method="cv", number=5)
+modelCT <- train(x = xTrain,y = yTrain, 
+                 method = "rpart", trControl = trControl)
+modelRF <- train(x = xTrain,y = yTrain, 
+                 method = "rf", trControl = trControl,verbose=FALSE, metric = "Accuracy")
+modelGBM <- train(x = xTrain,y = yTrain, 
+                  method = "gbm",trControl=trControl, verbose=FALSE)
+modelSVM <- svm(x = xTrain,y = yTrain,
+                kernel = "polynomial", cost = 10)
+```
+
+
+
+```{r}
+confusionMatrix(predict(modelCT,xVal),yVal)
+```
+
+
+
+```{r}
+confusionMatrix(predict(modelRF,xVal),yVal)
+```
+Ploting error vs numbet of tree
+```{r}
+plot(modelRF$finalModel,main="Error VS no of tree")
+```
+confusion matrix and overall statistics
+
+```{r}
+confusionMatrix(predict(modelGBM,xVal),yVal)
+```
+Prediction ,confusion Matrix 
+
+```{r}
+confusionMatrix(predict(modelSVM,xVal),yVal)
+```
+
+Getting Result 
+
+```{r}
+dfTest2 <- dataFrameTestLoad %>% select(finalColumnVariablee,problem_id)
+xTest <- dfTest2 %>% select(finalColumnVariablee)
+  
+resultvaiable <- data.frame("problem_id" = dataFrameTestLoad$problem_id,"PREDICTION_RF" = predict(modelRF,xTest),
+                     "PREDICTION_GBM" = predict(modelGBM,xTest),
+                     "PREDICTION_SVM" = predict(modelSVM,xTest))
+resultvaiable
+```
+
